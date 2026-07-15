@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>nyth</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <!-- nyth L1 — 本地优先的常驻陪伴 agent。核心押注：跨设备持久记忆连续性。
+       研究背景：nyth-ecosystem/research/phase-reports/（PIVOT-to-wedge，L1 是唯一 GO 的近期形态）。 -->
+  <div id="app" data-mode="accompany" aria-live="polite">
+
+    <header class="topbar">
+      <div class="brand">
+        <span class="dot" aria-hidden="true"></span>
+        <span class="wordmark">nyth</span>
+        <span class="tag">L1 · 本地优先</span>
+      </div>
+      <nav class="modes" role="tablist" aria-label="模式">
+        <!-- 模式系统 = 整机操作逻辑。切换是触控/物理的（研究结论：alone mode 靠语音进出会破坏其静默契约）。 -->
+        <button class="mode" data-set-mode="accompany" role="tab" aria-selected="true">陪伴</button>
+        <button class="mode" data-set-mode="alone" role="tab" aria-selected="false">独处</button>
+        <button class="mode" data-set-mode="dnd" role="tab" aria-selected="false">勿扰</button>
+      </nav>
+      <button class="ghost" id="open-settings" aria-label="设置">设置</button>
+    </header>
+
+    <main class="stage">
+      <!-- 对话面（陪伴模式主体） -->
+      <section class="thread" id="thread" aria-label="对话">
+        <div class="empty" id="empty-state">
+          <p class="lead">叫我的名字，或直接说点什么。</p>
+          <p class="sub">我在这台设备上记住你——你的记忆不出本机，除非你选择同步。<br />越用越贴合，且你随时能导出带走。</p>
+        </div>
+      </section>
+
+      <!-- 独处模式的静默态覆盖层 -->
+      <section class="quiet-veil" id="quiet-veil" hidden>
+        <p class="quiet-title">独处模式</p>
+        <p class="quiet-sub">我不会主动出声。需要我时，切回陪伴，或呼叫名字。</p>
+      </section>
+    </main>
+
+    <form class="composer" id="composer" autocomplete="off">
+      <input id="input" name="input" type="text" placeholder="对 nyth 说…" aria-label="输入" />
+      <button class="send" id="send" type="submit" aria-label="发送">↑</button>
+    </form>
+
+    <footer class="statusbar">
+      <span id="provider-status" class="muted">未连接模型 · 演示模式</span>
+      <button class="linky" id="open-memory">记忆 <span id="mem-count" class="pill">0</span></button>
+    </footer>
+  </div>
+
+  <!-- 记忆抽屉：差异化的核心可见面——"nyth 记住了你什么" + 主权（导出/导入/清除） -->
+  <aside class="drawer" id="memory-drawer" hidden aria-label="记忆">
+    <div class="drawer-head">
+      <h2>nyth 记住的</h2>
+      <button class="ghost" id="close-memory" aria-label="关闭">✕</button>
+    </div>
+    <p class="drawer-note">这些只存在你这台设备上。你拥有它们——可导出带走、可随时清除。</p>
+    <div class="mem-actions">
+      <button class="chip" id="export-mem">导出</button>
+      <button class="chip" id="import-mem">导入</button>
+      <button class="chip danger" id="clear-mem">清除全部</button>
+      <input type="file" id="import-file" accept="application/json" hidden />
+    </div>
+    <ul class="mem-list" id="mem-list"></ul>
+  </aside>
+
+  <!-- 设置抽屉：provider-neutral LLM（自带 key / 本地 Ollama / 演示）——模型主权 -->
+  <aside class="drawer" id="settings-drawer" hidden aria-label="设置">
+    <div class="drawer-head">
+      <h2>模型</h2>
+      <button class="ghost" id="close-settings" aria-label="关闭">✕</button>
+    </div>
+    <p class="drawer-note">nyth 不锁定任何供应商。用你选的模型——云端自带 key，或本地 Ollama 完全离线。key 只存本机。</p>
+
+    <label class="field">
+      <span>供应商</span>
+      <select id="provider">
+        <option value="demo">演示（无需 key，仅回显+记忆）</option>
+        <option value="ollama">本地 Ollama（离线 · 最主权）</option>
+        <option value="openai">OpenAI 兼容端点（自带 key）</option>
+      </select>
+    </label>
+
+    <label class="field" data-when="ollama openai">
+      <span>端点 Base URL</span>
+      <input id="base-url" type="text" placeholder="http://localhost:11434/v1" />
+    </label>
+    <label class="field" data-when="openai">
+      <span>API Key（只存本机 localStorage）</span>
+      <input id="api-key" type="password" placeholder="sk-…" />
+    </label>
+    <label class="field" data-when="ollama openai">
+      <span>模型名</span>
+      <input id="model" type="text" placeholder="llama3.1 / gpt-4o-mini …" />
+    </label>
+
+    <button class="primary" id="save-settings">保存</button>
+    <p class="drawer-note tiny" id="settings-hint"></p>
+  </aside>
+
+  <div class="scrim" id="scrim" hidden></div>
+
+  <script type="module" src="./src/app.js"></script>
+</body>
+</html>
