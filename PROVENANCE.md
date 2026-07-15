@@ -20,9 +20,9 @@ For an independent, host-agnostic anchor, the initial release is also identified
 below. Anyone can recompute it from the released files to verify integrity.
 
 ```
-Release:        nyth-l1 — first public increment
-Local commit:   <filled at commit time>
-Content SHA-256: <filled at release time — see RELEASE-HASH.txt>
+Release:         nyth-l1 — first public increment
+Initial commit:  bb3520bc9a5430ae328b0274f439939fad63870e  (2026-07-15T04:25:30-04:00)
+Content SHA-256: fc76ae04108c7d64163f1dc8e84b6aa3a6b4bcaadd044da82a5619ba03c8faf6  (see RELEASE-HASH.txt)
 ```
 
 Optional stronger anchoring (recommended, done by the author): submit the initial commit hash to an
