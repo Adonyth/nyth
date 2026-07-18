@@ -2,6 +2,8 @@
 import { store } from './store.js';
 import { complete } from './llm.js';
 import * as memory from './memory.js';
+import * as receipts from './receipts.js';
+import * as ledger from './ledger.js';
 
 const $ = (s) => document.querySelector(s);
 const app = $('#app');
@@ -88,8 +90,65 @@ async function send(text) {
   store.setMessages(history);
   sending = false; sendBtn.disabled = false; input.focus();
 
-  // 3) 回复完成后，后台用模型提炼记忆（fire-and-forget，不阻塞下一轮输入）
-  distill(text, userBubble);
+  // 3) 回复完成后，后台提炼记忆 → 再尝试主动建议（顺序：建议要读到最新记忆，避免竞态）
+  distill(text, userBubble).then(() => proactive(text));
+}
+
+// ── 可问责的主动建议：每次主动开口=一条冻结预测，用户回应=结算 ──
+const SUGGEST_SYS = `你是常驻助手 nyth。基于你对用户的了解和刚才的对话，如果你有把握，提出一条简短的主动建议（≤30 字，预测用户接下来可能需要什么，如帮忙起草/提醒/整理）。只输出建议文本本身。没有有把握的建议就只输出 SKIP。不要解释。`;
+
+async function proactive(lastUserText) {
+  try {
+    const settings = store.getSettings();
+    let text;
+    if (settings.provider === 'demo') {
+      // demo：零配置也能体验全链路——基于最新记忆给一条朴素建议
+      const mem = memory.all();
+      text = mem.length ? `要我以后主动留意和「${mem[mem.length - 1].v}」相关的事吗？` : 'SKIP';
+    } else {
+      const history = store.getMessages().slice(-6);
+      text = await complete(settings, [
+        { role: 'system', content: memory.asSystemPrompt() + '\n\n' + SUGGEST_SYS },
+        ...history,
+      ], { temperature: 0.4, maxTokens: 60 });
+    }
+    text = (text || '').trim();
+    if (!text || /^skip\b/i.test(text) || text.length > 60) return; // 无把握就沉默——不硬凑建议
+    const r = await receipts.freeze(text, lastUserText.slice(0, 80));
+    renderSuggestion(r);
+    updateScorePill();
+  } catch (e) {
+    console.warn('nyth: 主动建议生成失败（静默跳过）', e);
+  }
+}
+
+function renderSuggestion(receipt) {
+  const card = document.createElement('div');
+  card.className = 'suggestion';
+  card.innerHTML = `
+    <div class="sug-head">主动建议 · 已冻结 #${receipt.ledgerSeq}</div>
+    <div class="sug-body"></div>
+    <div class="sug-actions">
+      <button class="chip sug-yes">有用 ✓</button>
+      <button class="chip sug-no">没用 ✕</button>
+    </div>`;
+  card.querySelector('.sug-body').textContent = receipt.prediction;
+  const settle = async (outcome, label) => {
+    await receipts.resolve(receipt.id, outcome);
+    card.querySelector('.sug-actions').innerHTML = `<span class="sug-done">${label} · 已结算入账本</span>`;
+    updateScorePill();
+  };
+  card.querySelector('.sug-yes').addEventListener('click', () => settle('useful', '✓ 有用'));
+  card.querySelector('.sug-no').addEventListener('click', () => settle('not_useful', '✕ 没用'));
+  thread.appendChild(card);
+  thread.scrollTop = thread.scrollHeight;
+}
+
+function updateScorePill() {
+  const s = receipts.stats();
+  const pill = document.querySelector('#score-pill');
+  pill.textContent = s.resolved ? `${s.hitRate}%` : (s.frozen ? `${s.frozen} 待` : '–');
+  pill.classList.toggle('dim', !s.resolved);
 }
 
 // 后台记忆提炼：模型主路径（demo/失败回退启发式）→ 持久 → 就地给用户气泡补"记住了"标签
@@ -203,10 +262,52 @@ $('#save-settings').addEventListener('click', () => {
   closeDrawers();
 });
 
+// ── 打分史抽屉 ──────────────────────────────────────────
+function renderHistory() {
+  const s = receipts.stats();
+  $('#hist-stats').innerHTML = `
+    <span class="stat"><b>${s.resolved ? s.hitRate + '%' : '—'}</b> 命中率</span>
+    <span class="stat"><b>${s.useful}</b> 有用</span>
+    <span class="stat"><b>${s.notUseful}</b> 没用</span>
+    <span class="stat"><b>${s.expired}</b> 过期</span>
+    <span class="stat"><b>${s.frozen}</b> 待结算</span>`;
+  $('#ledger-status').textContent = `账本 ${ledger.length()} 行 · 链头 ${ledger.head().slice(0, 16)}…`;
+  const list = $('#hist-list');
+  list.innerHTML = '';
+  const items = receipts.list();
+  if (!items.length) { list.innerHTML = '<li class="mem-empty">还没有主动建议。<br>陪伴模式下多聊几句。</li>'; return; }
+  for (const r of items) {
+    const li = document.createElement('li');
+    li.className = 'mem-item';
+    const badge = r.status === 'frozen' ? '🧊 冻结中'
+      : r.outcome === 'useful' ? '✓ 有用' : r.outcome === 'not_useful' ? '✕ 没用' : '⏳ 过期';
+    li.innerHTML = `<span class="k">#${r.ledgerSeq} · ${new Date(r.ts).toLocaleString()} · ${badge}</span>`;
+    const body = document.createElement('span');
+    body.textContent = r.prediction;
+    li.appendChild(body);
+    list.appendChild(li);
+  }
+}
+$('#verify-ledger').addEventListener('click', async () => {
+  const v = await ledger.verifyChain();
+  $('#ledger-status').textContent = v.ok
+    ? `✓ 校验通过：${v.length} 行链完整 · 链头 ${v.head.slice(0, 16)}…`
+    : `✗ 校验失败：第 ${v.badSeq} 行断链（历史被改动）`;
+});
+$('#export-ledger').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(ledger.exportLedger(), null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'nyth-witness-ledger-' + new Date().toISOString().slice(0, 10) + '.json';
+  a.click(); URL.revokeObjectURL(a.href);
+});
+
 // ── 抽屉开关 ────────────────────────────────────────────
 const scrim = $('#scrim');
 function openDrawer(id) { closeDrawers(); $(id).hidden = false; scrim.hidden = false; }
-function closeDrawers() { $('#memory-drawer').hidden = true; $('#settings-drawer').hidden = true; scrim.hidden = true; }
+function closeDrawers() { $('#memory-drawer').hidden = true; $('#settings-drawer').hidden = true; $('#history-drawer').hidden = true; scrim.hidden = true; }
+$('#open-history').addEventListener('click', () => { renderHistory(); openDrawer('#history-drawer'); });
+$('#close-history').addEventListener('click', closeDrawers);
 $('#open-memory').addEventListener('click', () => { renderMemory(); openDrawer('#memory-drawer'); });
 $('#close-memory').addEventListener('click', closeDrawers);
 $('#open-settings').addEventListener('click', () => { loadSettingsForm(); openDrawer('#settings-drawer'); });
@@ -217,4 +318,6 @@ window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDrawers
 // ── 启动 ────────────────────────────────────────────────
 setMode(store.getMode());
 restore();
+receipts.expireStale().then(updateScorePill); // 超时的冻结建议清算为 expired（沉默也是结果）
+updateScorePill();
 input.focus();

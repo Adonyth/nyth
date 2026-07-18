@@ -49,9 +49,29 @@
 
     <footer class="statusbar">
       <span id="provider-status" class="muted">未连接模型 · 演示模式</span>
-      <button class="linky" id="open-memory">记忆 <span id="mem-count" class="pill">0</span></button>
+      <span class="status-actions">
+        <button class="linky" id="open-history">打分史 <span id="score-pill" class="pill dim">–</span></button>
+        <button class="linky" id="open-memory">记忆 <span id="mem-count" class="pill">0</span></button>
+      </span>
     </footer>
   </div>
+
+  <!-- 打分史抽屉：可问责的核心可见面——nyth 每次主动开口都被冻结、被结算、被打分 -->
+  <aside class="drawer" id="history-drawer" hidden aria-label="打分史">
+    <div class="drawer-head">
+      <h2>nyth 的打分史</h2>
+      <button class="ghost" id="close-history" aria-label="关闭">✕</button>
+    </div>
+    <p class="drawer-note">nyth 每次主动开口 = 一条被冻结的预测；你的回应 = 结算。全部记在本机
+      见证账本上（hash 链，改任何历史都会断链）。<b>这是问责记录，不是效果宣称。</b></p>
+    <div class="hist-stats" id="hist-stats"></div>
+    <div class="mem-actions">
+      <button class="chip" id="verify-ledger">复算校验账本</button>
+      <button class="chip" id="export-ledger">导出账本(仅hash链)</button>
+    </div>
+    <p class="drawer-note tiny" id="ledger-status"></p>
+    <ul class="mem-list" id="hist-list"></ul>
+  </aside>
 
   <!-- 记忆抽屉：差异化的核心可见面——"nyth 记住了你什么" + 主权（导出/导入/清除） -->
   <aside class="drawer" id="memory-drawer" hidden aria-label="记忆">

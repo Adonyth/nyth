@@ -25,6 +25,13 @@ This repository is the first working increment — a zero-build, local-first web
 - **Data sovereignty**: everything lives in your browser's local storage. One-click **export** your memory
   (your exit right), clear it anytime, no account required.
 
+- **Accountable suggestions + a local witness ledger**: every time nyth speaks up proactively, that
+  suggestion is **frozen** as a prediction on a local append-only hash chain; your response (useful /
+  not useful / silence) **resolves** it, and the scored history is yours to review. Tampering with any
+  past row breaks the chain — verify it yourself with one click. No mainstream assistant is accountable
+  for what it proactively says; nyth is. *(This is an accountability record of this device's agent,
+  not a product-performance claim.)*
+
 ## Run it
 
 Zero build, zero dependencies — pure ES modules, served over http (module scripts can't run from `file://`):

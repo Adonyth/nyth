@@ -87,6 +87,22 @@ body {
 .quiet-sub { font-size: 13px; color: var(--ink-faint); margin: 0; max-width: 26ch; }
 #app[data-mode="dnd"] { filter: saturate(.5) brightness(.85); }
 
+/* ── 主动建议卡（可问责：冻结→结算→打分）── */
+.suggestion {
+  align-self: flex-start; max-width: 82%; padding: 11px 14px;
+  border-radius: var(--radius); border: 1px dashed var(--accent);
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  animation: rise .28s ease; font-size: 14px;
+}
+.sug-head { font-size: 11px; color: var(--accent); letter-spacing: .4px; margin-bottom: 5px; }
+.sug-body { color: var(--ink); }
+.sug-actions { display: flex; gap: 8px; margin-top: 9px; }
+.sug-done { font-size: 12px; color: var(--ink-faint); }
+.status-actions { display: flex; gap: 14px; }
+.pill.dim { background: var(--bg-elev2); color: var(--ink-faint); }
+.hist-stats { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12.5px; color: var(--ink-soft); }
+.hist-stats .stat b { color: var(--ink); font-size: 15px; margin-right: 3px; }
+
 /* ── 输入 ── */
 .composer { display: flex; gap: 8px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); }
 #input { flex: 1; background: var(--bg-elev); border: 1px solid var(--line); color: var(--ink); font: inherit; font-size: 15px; padding: 12px 14px; border-radius: 999px; outline: none; transition: border-color .18s; }
