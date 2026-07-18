@@ -87,6 +87,9 @@ body {
 .quiet-sub { font-size: 13px; color: var(--ink-faint); margin: 0; max-width: 26ch; }
 #app[data-mode="dnd"] { filter: saturate(.5) brightness(.85); }
 
+.sep { border: 0; border-top: 1px solid var(--line); margin: 6px 0; }
+.sub-h { font-size: 14px; margin: 0; color: var(--ink-soft); }
+
 /* ── 主动建议卡（可问责：冻结→结算→打分）── */
 .suggestion {
   align-self: flex-start; max-width: 82%; padding: 11px 14px;

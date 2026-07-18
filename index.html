@@ -121,6 +121,18 @@
 
     <button class="primary" id="save-settings">保存</button>
     <p class="drawer-note tiny" id="settings-hint"></p>
+
+    <hr class="sep" />
+    <h2 class="sub-h">枢纽同步（跨设备记忆连续性）</h2>
+    <p class="drawer-note">经<b>你自己的枢纽</b>同步记忆——零第三方云、数据不出局域网。
+      在另一台设备的浏览器打开本枢纽地址即可接上同一份记忆。
+      <span class="tiny">（v0：完整性+局域网边界；端到端加密是下一步，公网暂勿使用。）</span></p>
+    <label class="field">
+      <span>枢纽地址（默认=本页来源）</span>
+      <input id="hub-url" type="text" placeholder="http://192.168.x.x:4173" />
+    </label>
+    <button class="primary" id="toggle-sync">开启同步</button>
+    <p class="drawer-note tiny" id="sync-status">未开启 · 本机 deviceId 载入中…</p>
   </aside>
 
   <div class="scrim" id="scrim" hidden></div>

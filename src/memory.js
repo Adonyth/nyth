@@ -4,6 +4,7 @@
 
 import { store } from './store.js';
 import { complete } from './llm.js';
+import { recordOp } from './sync.js';
 
 const STOP = '\\s，。,.!！?？、；;:：'; // 值不该跨过的标点/空白
 const PATTERNS = [
@@ -91,6 +92,7 @@ export function remember(items) {
     }
   }
   store.setMemory(mem);
+  for (const c of changed) recordOp('remember', c.k, c.v); // 跨设备连续性：变更入 op-log
   return changed;
 }
 
@@ -108,15 +110,17 @@ export function all() { return store.getMemory(); }
 
 export function forget(index) {
   const mem = store.getMemory();
-  mem.splice(index, 1);
+  const [removed] = mem.splice(index, 1);
   store.setMemory(mem);
+  if (removed) recordOp('forget', removed.k, '');
 }
 
-export function clearAll() { store.setMemory([]); }
+export function clearAll() { store.setMemory([]); recordOp('clear'); }
 
 export function importItems(items) {
   if (!Array.isArray(items)) return 0;
   const clean = items.filter((e) => e && typeof e.k === 'string' && typeof e.v === 'string');
   store.setMemory(clean);
+  for (const e of clean) recordOp('remember', e.k, e.v);
   return clean.length;
 }

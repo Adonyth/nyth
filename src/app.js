@@ -4,6 +4,7 @@ import { complete } from './llm.js';
 import * as memory from './memory.js';
 import * as receipts from './receipts.js';
 import * as ledger from './ledger.js';
+import * as sync from './sync.js';
 
 const $ = (s) => document.querySelector(s);
 const app = $('#app');
@@ -237,7 +238,9 @@ function loadSettingsForm() {
   $('#base-url').value = s.baseUrl || '';
   $('#api-key').value = s.apiKey || '';
   $('#model').value = s.model || '';
+  $('#hub-url').value = s.hubUrl || window.location.origin;
   syncSettingsFields();
+  refreshSyncUI();
 }
 function syncSettingsFields() {
   const p = $('#provider').value;
@@ -252,14 +255,42 @@ function syncSettingsFields() {
 }
 $('#provider').addEventListener('change', syncSettingsFields);
 $('#save-settings').addEventListener('click', () => {
+  const prev = store.getSettings();
   store.setSettings({
     provider: $('#provider').value,
     baseUrl: $('#base-url').value.trim(),
     apiKey: $('#api-key').value.trim(),
     model: $('#model').value.trim(),
+    hubUrl: $('#hub-url').value.trim() || prev.hubUrl || '',
+    syncOn: prev.syncOn || false,
   });
   updateProviderStatus();
   closeDrawers();
+});
+
+// ── 枢纽同步（跨设备记忆连续性）────────────────────────────
+function refreshSyncUI() {
+  const on = sync.running();
+  $('#toggle-sync').textContent = on ? '关闭同步' : '开启同步';
+  if (!on) $('#sync-status').textContent = `未开启 · 本机 ${sync.deviceId()}`;
+}
+sync.onStatus((s) => {
+  if (s.stopped) return refreshSyncUI();
+  $('#sync-status').textContent = s.ok
+    ? `✓ 已连枢纽 · 本机 ${s.device}${s.pulled ? ` · 拉入 ${s.pulled} 条` : ''}${s.pushed ? ` · 推送 ${s.pushed} 条` : ''}`
+    : `✗ 枢纽不可达：${s.error}`;
+  if (s.ok && s.pulled) { updateMemCount(); renderMemory(); } // 远端记忆到达，刷新视图
+});
+$('#toggle-sync').addEventListener('click', () => {
+  const st = store.getSettings();
+  if (sync.running()) {
+    sync.stop();
+    store.setSettings({ ...st, syncOn: false });
+  } else {
+    store.setSettings({ ...st, hubUrl: $('#hub-url').value.trim() || st.hubUrl || '', syncOn: true });
+    sync.start();
+  }
+  refreshSyncUI();
 });
 
 // ── 打分史抽屉 ──────────────────────────────────────────
@@ -320,4 +351,5 @@ setMode(store.getMode());
 restore();
 receipts.expireStale().then(updateScorePill); // 超时的冻结建议清算为 expired（沉默也是结果）
 updateScorePill();
+if (store.getSettings().syncOn) sync.start(); // 上次开着同步则自动续上
 input.focus();
