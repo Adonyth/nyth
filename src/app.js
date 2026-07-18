@@ -63,9 +63,8 @@ async function send(text) {
   sending = true; sendBtn.disabled = true;
   if (emptyState.isConnected) emptyState.remove();
 
-  // 1) 用户消息 + 就地抽取记忆（本地、离线）
-  const learned = memory.remember(memory.extract(text));
-  bubble('user', text, learned);
+  // 1) 用户消息（记忆提炼延后到回复完成后进行，避免抢本地模型队列拖慢首响）
+  const userBubble = bubble('user', text);
 
   // 2) 组装喂给模型的消息：系统记忆 + 历史 + 本次
   const history = store.getMessages();
@@ -87,9 +86,26 @@ async function send(text) {
   }
 
   store.setMessages(history);
-  updateMemCount();
-  renderMemory();
   sending = false; sendBtn.disabled = false; input.focus();
+
+  // 3) 回复完成后，后台用模型提炼记忆（fire-and-forget，不阻塞下一轮输入）
+  distill(text, userBubble);
+}
+
+// 后台记忆提炼：模型主路径（demo/失败回退启发式）→ 持久 → 就地给用户气泡补"记住了"标签
+async function distill(text, bubbleEl) {
+  try {
+    const changed = memory.remember(await memory.extractSmart(store.getSettings(), text));
+    if (changed.length && bubbleEl?.isConnected) {
+      const tag = document.createElement('span');
+      tag.className = 'learned';
+      tag.textContent = '↳ 记住了：' + changed.map((l) => `${l.k}·${l.v}`).join('；');
+      bubbleEl.appendChild(tag);
+    }
+    if (changed.length) { updateMemCount(); renderMemory(); }
+  } catch (e) {
+    console.warn('nyth: 记忆提炼后台任务失败', e);
+  }
 }
 
 $('#composer').addEventListener('submit', (e) => {

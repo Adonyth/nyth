@@ -2,10 +2,10 @@
 // 统一走 OpenAI 兼容的 chat/completions 形状——覆盖 OpenAI、本地 Ollama(/v1)、LM Studio 等。
 // demo 模式无需任何 key，纯本地回显 + 记忆演示，用于零配置首跑。
 
-export async function complete(settings, messages) {
+export async function complete(settings, messages, opts = {}) {
   const provider = settings.provider || 'demo';
   if (provider === 'demo') return demoComplete(messages);
-  return openaiCompatComplete(settings, messages);
+  return openaiCompatComplete(settings, messages, opts);
 }
 
 // 演示后端：不联网。回显 + 轻量"理解"，让记忆连续性可被立刻感知。
@@ -24,23 +24,34 @@ function demoComplete(messages) {
   return Promise.resolve(reply);
 }
 
-async function openaiCompatComplete(settings, messages) {
+async function openaiCompatComplete(settings, messages, opts = {}) {
   const base = (settings.baseUrl || '').replace(/\/+$/, '');
   if (!base) throw new Error('未设置端点 Base URL（设置 → 端点）。');
   const url = base + '/chat/completions';
   const headers = { 'Content-Type': 'application/json' };
   if (settings.apiKey) headers['Authorization'] = 'Bearer ' + settings.apiKey;
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({
-      model: settings.model || 'gpt-4o-mini',
-      messages: messages.map(({ role, content }) => ({ role, content })),
-      temperature: 0.6,
-      stream: false,
-    }),
-  });
+  const body = {
+    model: settings.model || 'gpt-4o-mini',
+    messages: messages.map(({ role, content }) => ({ role, content })),
+    temperature: opts.temperature ?? 0.6,
+    stream: false,
+  };
+  if (opts.maxTokens) body.max_tokens = opts.maxTokens;
+
+  // 超时守卫：后端卡住时优雅报错，绝不让 UI 永久"…"（本地首token+加载可能较慢，给足 90s）
+  const ctrl = new AbortController();
+  const timeoutMs = opts.timeoutMs ?? 90000;
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  let res;
+  try {
+    res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body), signal: ctrl.signal });
+  } catch (e) {
+    if (e.name === 'AbortError') throw new Error(`模型超时（${timeoutMs / 1000}s 无响应）——检查端点/模型是否在跑。`);
+    throw new Error('无法连接模型端点：' + (e.message || e));
+  } finally {
+    clearTimeout(timer);
+  }
   if (!res.ok) {
     const detail = await res.text().catch(() => '');
     throw new Error('模型调用失败 ' + res.status + '：' + detail.slice(0, 180));
