@@ -1,0 +1,7 @@
+nyth-l1 — first public increment · provenance anchor
+Repository:      https://github.com/Adonyth/nyth
+Git commit:      ca068e97bba1c4573b1b6f354f9a07d292cd1935
+Content SHA-256: fc76ae04108c7d64163f1dc8e84b6aa3a6b4bcaadd044da82a5619ba03c8faf6  (git archive HEAD)
+Asserted date:   2026-07-15 (initial public release)
+This file is timestamped via OpenTimestamps (PROVENANCE-ANCHOR.txt.ots),
+anchoring the above identifiers to the Bitcoin blockchain, independent of any host.

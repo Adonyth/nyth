@@ -25,10 +25,24 @@ Initial commit:  bb3520bc9a5430ae328b0274f439939fad63870e  (2026-07-15T04:25:30-
 Content SHA-256: fc76ae04108c7d64163f1dc8e84b6aa3a6b4bcaadd044da82a5619ba03c8faf6  (see RELEASE-HASH.txt)
 ```
 
-Optional stronger anchoring (recommended, done by the author): submit the initial commit hash to an
-independent timestamping authority (e.g. an OpenTimestamps `.ots` proof anchored to a public blockchain, or a
-Zenodo release with a DOI). Either produces a third-party-verifiable timestamp that does not depend on any
-single host.
+### Independent blockchain anchor (OpenTimestamps)
+
+A host-independent timestamp has been created with [OpenTimestamps](https://opentimestamps.org):
+
+- **[`PROVENANCE-ANCHOR.txt`](./PROVENANCE-ANCHOR.txt)** records the commit hash and content SHA-256 above.
+- **[`PROVENANCE-ANCHOR.txt.ots`](./PROVENANCE-ANCHOR.txt.ots)** is its OpenTimestamps proof, committing that
+  file's hash to public timestamp calendars and, once a Bitcoin block confirms, to the **Bitcoin blockchain** —
+  a third-party-verifiable timestamp that depends on no single host, account, or Git provider.
+
+Verify it yourself:
+
+```bash
+pip install opentimestamps-client
+ots upgrade PROVENANCE-ANCHOR.txt.ots   # pulls in the Bitcoin attestation once confirmed (~a few hours after stamping)
+ots verify  PROVENANCE-ANCHOR.txt.ots   # checks the file against the on-chain timestamp
+```
+
+(At publication the proof is a pending calendar commitment; `ots upgrade` completes the Bitcoin attestation.)
 
 ## Scope of this publication
 
