@@ -1,6 +1,9 @@
 # nyth — a local-first companion agent prototype
 
+<!-- OMYTEA_ORG_SYNC_README_START -->
 > **Organization source of truth:** [`Omytea-Almighty/nyth`](https://github.com/Omytea-Almighty/nyth). Humans and agents must read [`ORG-SYNC.md`](ORG-SYNC.md) before working. Reviewed commits are queued for fail-closed organization sync; automation never stages or commits dirty work and never changes visibility.
+> This repository is public: every intentional commit is a publication decision. Secret scanning is not a privacy, PII, licensing, research, or commercial-sensitivity review.
+<!-- OMYTEA_ORG_SYNC_README_END -->
 
 **nyth** explores a simple design goal: an assistant whose durable memory and operating state remain under
 the user's control, while model backends and devices can be changed through explicit, testable interfaces.
